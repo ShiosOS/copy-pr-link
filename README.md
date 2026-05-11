@@ -2,6 +2,15 @@
 
 Chrome extension that copies a GitHub pull request as a rich-text hyperlink. Pasting in Slack, email, or any rich-text editor renders as `Pull Request 1234: Title` with only the identifier portion as a clickable link — matching Azure DevOps's "Copy" button on PR pages.
 
+## Install from a release
+
+1. Download the `copy-pr-link-vX.Y.Z.zip` asset from the [latest release](https://github.com/ShiosOS/copy-pr-link/releases/latest).
+2. Unzip it somewhere permanent — Chrome loads the folder by path, so deleting or moving it breaks the extension.
+3. Open `chrome://extensions/`, toggle **Developer mode** on, click **Load unpacked**, and select the unzipped folder.
+4. Pin the extension to your toolbar.
+
+New releases require redownloading the zip and reloading the extension — Chrome does not auto-update unpacked extensions.
+
 ## Install (development)
 
 1. Open `chrome://extensions/`.
