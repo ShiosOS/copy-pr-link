@@ -3,10 +3,17 @@
   "name": "Copy PR Link",
   "version": "0.1.0",
   "description": "Copy a GitHub PR as a rich-text hyperlink (Pull Request 1234: Title) that pastes as a clickable link in Slack, email, and docs.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "copy-pr-link@shios",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["https://github.com/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
   },
   "action": {
     "default_title": "Copy PR Link",
