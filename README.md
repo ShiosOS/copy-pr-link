@@ -65,6 +65,6 @@ New releases require redownloading the zip and reloading the extension — Chrom
 
 ## Notes
 
-- The clipboard write uses `document.execCommand('copy')` because `navigator.clipboard.write()` can fail with "Document not focused" immediately after an action-button click.
+- The clipboard write prefers `navigator.clipboard.write()` for rich HTML copy and falls back to `document.execCommand('copy')` when needed for browser compatibility.
 - Slack's "Check this link" anti-phishing warning fires for rich-text anchors whose visible text contains `#`. The display format `Pull Request N` (no `#`) sidesteps the warning.
 - Icon credit: GitHub Octicons (`git-pull-request`), MIT licensed. See `icons/LICENSE-octicons.txt`.

@@ -6,10 +6,13 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "copy-pr-link@shios",
+      "data_collection_permissions": {
+        "required": ["none"]
+      },
       "strict_min_version": "109.0"
     }
   },
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "clipboardWrite"],
   "host_permissions": ["https://github.com/*"],
   "background": {
     "service_worker": "background.js",

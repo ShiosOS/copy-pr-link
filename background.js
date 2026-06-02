@@ -34,7 +34,8 @@ function parsePrTitle(documentTitle) {
 async function updateActionForTab(tab) {
   if (!tab || tab.id == null) return;
   try {
-    if (parsePrUrl(tab.url)) {
+    const pr = parsePrUrl(tab.url);
+    if (pr) {
       await chrome.action.enable(tab.id);
     } else {
       await chrome.action.disable(tab.id);
@@ -59,14 +60,39 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   }
 });
 
-function writeRichLinkInPage(linkText, tail, href) {
-  // Runs in the page context. Uses execCommand because navigator.clipboard.write
-  // can fail with "Document not focused" right after the user clicks the action button.
-  // Only the identifier ("Pull Request 12345") is inside the <a>; the trailing title
-  // sits in a sibling <span> so only that portion shows as a hyperlink in Slack.
-  const escape = (s) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const html = `<a href="${escape(href)}">${escape(linkText)}</a><span>${escape(tail)}</span>`;
+async function writeRichLinkInPage(linkText, tail, href) {
+  // Prefer async clipboard for rich HTML copy, with execCommand as fallback.
+  // Only the identifier is inside the <a>, so the title stays plain text.
+  const text = `${linkText}${tail}`;
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.textContent = linkText;
+  const span = document.createElement("span");
+  span.textContent = tail;
+
+  if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+    try {
+      const richContainer = document.createElement("div");
+      richContainer.append(anchor.cloneNode(true), span.cloneNode(true));
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": new Blob([text], { type: "text/plain" }),
+          "text/html": new Blob([richContainer.innerHTML], { type: "text/html" }),
+        }),
+      ]);
+
+      return {
+        ok: true,
+        method: "clipboard.write",
+        href,
+        linkText,
+        tail,
+        title: document.title,
+        activeElement: document.activeElement?.tagName ?? null,
+      };
+    } catch {
+    }
+  }
 
   const div = document.createElement("div");
   div.contentEditable = "true";
@@ -75,7 +101,7 @@ function writeRichLinkInPage(linkText, tail, href) {
   div.style.left = "0";
   div.style.opacity = "0";
   div.style.pointerEvents = "none";
-  div.innerHTML = html;
+  div.append(anchor, span);
   document.body.appendChild(div);
 
   const range = document.createRange();
@@ -91,7 +117,17 @@ function writeRichLinkInPage(linkText, tail, href) {
     sel.removeAllRanges();
     div.remove();
   }
-  return ok;
+
+  return {
+    ok,
+    method: "execCommand",
+    href,
+    linkText,
+    tail,
+    title: document.title,
+    activeElement: document.activeElement?.tagName ?? null,
+    selectionRangeCount: sel.rangeCount,
+  };
 }
 
 async function flashBadge(tabId) {
@@ -115,11 +151,15 @@ async function copyForTab(tab) {
   const linkText = `Pull Request ${pr.number}`;
   const tail = `: ${title}`;
 
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: writeRichLinkInPage,
-    args: [linkText, tail, pr.canonical],
-  });
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: writeRichLinkInPage,
+      args: [linkText, tail, pr.canonical],
+    });
+  } catch {
+    return;
+  }
 
   flashBadge(tab.id);
 }
