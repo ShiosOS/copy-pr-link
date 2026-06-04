@@ -49,10 +49,45 @@ New releases require redownloading the zip and reloading the extension — Chrom
 - **Chrome:** Visit `chrome://extensions/shortcuts` and rebind **Copy current PR as a rich-text link**.
 - **Firefox:** Visit `about:addons`, click the gear icon → **Manage Extension Shortcuts**, and rebind the command.
 
+## Development
+
+Requires Node.js 20+.
+
+```bash
+npm install        # install dev tooling (Vitest, ESLint, Prettier, web-ext)
+npm test           # run the unit tests
+npm run coverage   # run tests with a coverage report (100% on src/)
+npm run lint       # ESLint
+npm run lint:ext   # web-ext lint (validates the manifest for Firefox)
+npm run format     # auto-format with Prettier
+npm run build      # package a clean .zip into dist/
+npm run check      # everything CI runs: format check + lint + web-ext lint + tests
+```
+
+`npm run build` produces `dist/copy-pr-link-v<version>.zip` containing only the
+runtime files (`manifest.json`, `background.js`, `src/`, `icons/`). Load that
+unpacked, or upload it to a release.
+
+## Architecture
+
+The code is split so the logic is unit-testable in Node, separate from the
+browser-only wiring:
+
+- `src/pr.js` — **pure logic**, no browser APIs: `parsePrUrl` (URL → PR parts),
+  `parsePrTitle` (document title → PR title), `formatPrLink` (PR + title → the
+  link parts). This is what the test suite (`tests/pr.test.js`) exercises.
+- `background.js` — the **extension layer**: imports `src/pr.js`, wires up the
+  toolbar action, keyboard command, and tab listeners, and injects the
+  clipboard write into the page. It's loaded as an ES module
+  (`"background": { "type": "module" }`), which is why the manifest requires
+  Firefox 112+.
+
 ## Files
 
 - `manifest.json` — MV3 manifest
-- `background.js` — background script / service worker (action handler, command handler, tab listener, clipboard write)
+- `background.js` — extension entry point / service worker (action, command, and tab listeners; clipboard write)
+- `src/pr.js` — pure, testable PR-parsing and link-formatting helpers
+- `tests/pr.test.js` — Vitest unit tests for `src/pr.js`
 - `icons/icon-{16,48,128}.png` — toolbar icons
 - `icons/icon.svg` — source for regenerating the PNGs (Octicons `git-pull-request`, MIT)
 - `icons/LICENSE-octicons.txt` — MIT license attribution
@@ -68,3 +103,7 @@ New releases require redownloading the zip and reloading the extension — Chrom
 - The clipboard write prefers `navigator.clipboard.write()` for rich HTML copy and falls back to `document.execCommand('copy')` when needed for browser compatibility.
 - Slack's "Check this link" anti-phishing warning fires for rich-text anchors whose visible text contains `#`. The display format `Pull Request N` (no `#`) sidesteps the warning.
 - Icon credit: GitHub Octicons (`git-pull-request`), MIT licensed. See `icons/LICENSE-octicons.txt`.
+
+## License
+
+[MIT](LICENSE).
