@@ -1,5 +1,9 @@
 # Copy PR Link
 
+[![CI](https://github.com/ShiosOS/copy-pr-link/actions/workflows/ci.yml/badge.svg)](https://github.com/ShiosOS/copy-pr-link/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ShiosOS/copy-pr-link/actions/workflows/codeql.yml/badge.svg)](https://github.com/ShiosOS/copy-pr-link/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Browser extension (Chrome and Firefox) that copies a GitHub pull request as a rich-text hyperlink. Pasting in Slack, email, or any rich-text editor renders as `Pull Request 1234: Title` with only the identifier portion as a clickable link — matching Azure DevOps's "Copy" button on PR pages.
 
 ## Install from a release
