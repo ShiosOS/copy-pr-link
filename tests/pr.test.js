@@ -24,7 +24,7 @@ describe("parsePrUrl", () => {
   it("strips query strings and hash fragments from the canonical URL", () => {
     expect(
       parsePrUrl("https://github.com/o/r/pull/9?diff=split#discussion")
-        .canonical,
+        ?.canonical,
     ).toBe("https://github.com/o/r/pull/9");
   });
 
@@ -97,6 +97,7 @@ describe("parsePrTitle", () => {
 
 describe("formatPrLink", () => {
   const pr = parsePrUrl("https://github.com/octocat/hello-world/pull/1234");
+  if (!pr) throw new Error("test setup: PR URL should parse");
 
   it("builds link text, tail, plain text, and href", () => {
     expect(

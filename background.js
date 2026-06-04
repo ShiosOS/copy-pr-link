@@ -3,6 +3,10 @@ import { parsePrUrl, formatPrLink } from "./src/pr.js";
 const BADGE_COLOR = "#2ea44f";
 const BADGE_DURATION_MS = 1500;
 
+/**
+ * Enable the toolbar action on PR pages, disable it elsewhere.
+ * @param {chrome.tabs.Tab | undefined} tab
+ */
 async function updateActionForTab(tab) {
   if (!tab || tab.id == null) return;
   try {
@@ -17,7 +21,7 @@ async function updateActionForTab(tab) {
   }
 }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status === "complete") {
     updateActionForTab(tab);
   }
@@ -32,6 +36,13 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   }
 });
 
+/**
+ * Runs in the page context (injected via chrome.scripting): writes a rich-text
+ * link to the clipboard. Self-contained — it cannot reference module imports.
+ * @param {string} linkText The hyperlinked text ("Pull Request 1234").
+ * @param {string} tail Plain-text remainder (": Title"), possibly empty.
+ * @param {string} href The link target.
+ */
 async function writeRichLinkInPage(linkText, tail, href) {
   // Prefer async clipboard for rich HTML copy, with execCommand as fallback.
   // Only the identifier is inside the <a>, so the title stays plain text.
@@ -83,6 +94,19 @@ async function writeRichLinkInPage(linkText, tail, href) {
   const range = document.createRange();
   range.selectNodeContents(div);
   const sel = window.getSelection();
+  if (!sel) {
+    div.remove();
+    return {
+      ok: false,
+      method: "execCommand",
+      href,
+      linkText,
+      tail,
+      title: document.title,
+      activeElement: document.activeElement?.tagName ?? null,
+      selectionRangeCount: 0,
+    };
+  }
   sel.removeAllRanges();
   sel.addRange(range);
 
@@ -106,6 +130,10 @@ async function writeRichLinkInPage(linkText, tail, href) {
   };
 }
 
+/**
+ * Briefly show a ✓ badge on the action to confirm the copy.
+ * @param {number} tabId
+ */
 async function flashBadge(tabId) {
   try {
     await chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLOR });
@@ -118,8 +146,12 @@ async function flashBadge(tabId) {
   }, BADGE_DURATION_MS);
 }
 
+/**
+ * Parse the tab's PR, then inject the clipboard write and flash the badge.
+ * @param {chrome.tabs.Tab | undefined} tab
+ */
 async function copyForTab(tab) {
-  if (!tab) return;
+  if (!tab || tab.id == null) return;
   const pr = parsePrUrl(tab.url);
   if (!pr) return;
 

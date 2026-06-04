@@ -8,6 +8,7 @@ const ignoreFiles = [
   "dist",
   "*.config.js",
   "web-ext-config.mjs",
+  "tsconfig.json",
   "package.json",
   "package-lock.json",
   "*.md",
