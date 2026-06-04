@@ -1,0 +1,38 @@
+{
+  "name": "copy-pr-link",
+  "version": "0.1.0",
+  "description": "Copy a GitHub PR as a rich-text hyperlink (Pull Request 1234: Title) that pastes as a clickable link in Slack, email, and docs.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/ShiosOS/copy-pr-link",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShiosOS/copy-pr-link.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:ext": "web-ext lint --source-dir .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "web-ext build --source-dir . --artifacts-dir dist",
+    "check": "npm run format:check && npm run lint && npm run lint:ext && npm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "vitest": "^3.0.0",
+    "web-ext": "^8.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
