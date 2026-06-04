@@ -1,35 +1,7 @@
-const PR_PATH = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/|$)/;
+import { parsePrUrl, formatPrLink } from "./src/pr.js";
+
 const BADGE_COLOR = "#2ea44f";
 const BADGE_DURATION_MS = 1500;
-
-function parsePrUrl(urlString) {
-  if (!urlString) return null;
-  let u;
-  try {
-    u = new URL(urlString);
-  } catch {
-    return null;
-  }
-  if (u.hostname !== "github.com") return null;
-  const m = u.pathname.match(PR_PATH);
-  if (!m) return null;
-  const [, owner, repo, number] = m;
-  return {
-    owner,
-    repo,
-    number,
-    canonical: `https://github.com/${owner}/${repo}/pull/${number}`,
-  };
-}
-
-function parsePrTitle(documentTitle) {
-  // GitHub PR pages set <title> to: "Add user auth · Pull Request #12345 · owner/repo"
-  // Sub-tabs (Files, Commits) wedge extra segments in but always keep "Pull Request #N".
-  // Some pages append " by <username>" before the · Pull Request separator — strip it.
-  const m = documentTitle.match(/^(.*?)\s·\sPull Request\s#\d+/);
-  const raw = m ? m[1] : documentTitle;
-  return raw.replace(/\s+by\s+[^\s·]+\s*$/, "").trim();
-}
 
 async function updateActionForTab(tab) {
   if (!tab || tab.id == null) return;
@@ -77,7 +49,9 @@ async function writeRichLinkInPage(linkText, tail, href) {
       await navigator.clipboard.write([
         new ClipboardItem({
           "text/plain": new Blob([text], { type: "text/plain" }),
-          "text/html": new Blob([richContainer.innerHTML], { type: "text/html" }),
+          "text/html": new Blob([richContainer.innerHTML], {
+            type: "text/html",
+          }),
         }),
       ]);
 
@@ -91,6 +65,8 @@ async function writeRichLinkInPage(linkText, tail, href) {
         activeElement: document.activeElement?.tagName ?? null,
       };
     } catch {
+      // Async clipboard can be blocked (e.g. document not focused); fall
+      // through to the execCommand path below.
     }
   }
 
@@ -147,15 +123,13 @@ async function copyForTab(tab) {
   const pr = parsePrUrl(tab.url);
   if (!pr) return;
 
-  const title = parsePrTitle(tab.title || "");
-  const linkText = `Pull Request ${pr.number}`;
-  const tail = `: ${title}`;
+  const { linkText, tail, href } = formatPrLink(pr, tab.title);
 
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: writeRichLinkInPage,
-      args: [linkText, tail, pr.canonical],
+      args: [linkText, tail, href],
     });
   } catch {
     return;
