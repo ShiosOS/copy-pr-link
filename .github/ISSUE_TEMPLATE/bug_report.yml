@@ -1,0 +1,45 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong?
+      placeholder: On a GitHub PR page I clicked the icon and...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Example PR URL (if relevant)
+      placeholder: https://github.com/owner/repo/pull/123
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Other (note in description)
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Browser & extension version
+      placeholder: e.g. Chrome 130, extension 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: paste-target
+    attributes:
+      label: Where were you pasting?
+      description: e.g. Slack, Gmail, Notion, Google Docs — and what rendered?
