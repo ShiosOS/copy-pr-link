@@ -44,7 +44,8 @@ New releases require redownloading the zip and reloading the extension — Chrom
 
 - Navigate to any `https://github.com/<owner>/<repo>/pull/<number>` page.
 - Click the toolbar icon — or press `Alt+Shift+C` — to copy.
-- The icon flashes a ✓ to confirm.
+- The icon flashes a green ✓ when the copy succeeds, or a red ! if it fails
+  (e.g. the clipboard was blocked).
 - On non-PR pages the icon is grayed out.
 - Paste in Slack / Gmail / Notion / docs → renders as `Pull Request 1234: Title` with `Pull Request 1234` as the hyperlink.
 
@@ -79,12 +80,14 @@ browser-only wiring:
 
 - `src/pr.js` — **pure logic**, no browser APIs: `parsePrUrl` (URL → PR parts),
   `parsePrTitle` (document title → PR title), `formatPrLink` (PR + title → the
-  link parts). This is what the test suite (`tests/pr.test.js`) exercises.
+  link parts). Exercised by `tests/pr.test.js` and held at 100% coverage.
 - `background.js` — the **extension layer**: imports `src/pr.js`, wires up the
   toolbar action, keyboard command, and tab listeners, and injects the
-  clipboard write into the page. It's loaded as an ES module
-  (`"background": { "type": "module" }`), which is why the manifest requires
-  Firefox 112+.
+  clipboard write into the page. Its listeners are tested against a mocked
+  `chrome` API in `tests/background.test.js`; the injected in-page clipboard
+  function is validated by `web-ext lint` and manual testing. It's loaded as
+  an ES module (`"background": { "type": "module" }`), which is why the
+  manifest requires Firefox 112+.
 
 ## Files
 
@@ -92,6 +95,7 @@ browser-only wiring:
 - `background.js` — extension entry point / service worker (action, command, and tab listeners; clipboard write)
 - `src/pr.js` — pure, testable PR-parsing and link-formatting helpers
 - `tests/pr.test.js` — Vitest unit tests for `src/pr.js`
+- `tests/background.test.js` — Vitest unit tests for the extension wiring, run against a mocked `chrome` API
 - `icons/icon-{16,48,128}.png` — toolbar icons
 - `icons/icon.svg` — source for regenerating the PNGs (Octicons `git-pull-request`, MIT)
 - `icons/LICENSE-octicons.txt` — MIT license attribution
@@ -100,6 +104,7 @@ browser-only wiring:
 
 - `activeTab` — read the active tab's title and URL when you click.
 - `scripting` — inject the clipboard write into the page's context.
+- `clipboardWrite` — write the formatted link to the clipboard.
 - `https://github.com/*` — so the icon can be enabled / disabled as you navigate.
 
 ## Notes

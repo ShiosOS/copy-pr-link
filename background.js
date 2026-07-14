@@ -1,6 +1,7 @@
 import { parsePrUrl, formatPrLink } from "./src/pr.js";
 
-const BADGE_COLOR = "#2ea44f";
+const SUCCESS_BADGE = { text: "✓", color: "#2ea44f" };
+const FAILURE_BADGE = { text: "!", color: "#cf222e" };
 const BADGE_DURATION_MS = 1500;
 
 /**
@@ -20,6 +21,24 @@ async function updateActionForTab(tab) {
     // Tab may have closed between query and update — ignore.
   }
 }
+
+/**
+ * Sync the action state for every open tab. Without this, tabs that were
+ * already open when the extension was installed (or when the browser
+ * restarted) would keep the default-enabled action until their next
+ * navigation.
+ */
+async function syncAllTabs() {
+  try {
+    const tabs = await chrome.tabs.query({});
+    await Promise.all(tabs.map(updateActionForTab));
+  } catch {
+    // Ignore.
+  }
+}
+
+chrome.runtime.onInstalled.addListener(syncAllTabs);
+chrome.runtime.onStartup.addListener(syncAllTabs);
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status === "complete") {
@@ -42,6 +61,8 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
  * @param {string} linkText The hyperlinked text ("Pull Request 1234").
  * @param {string} tail Plain-text remainder (": Title"), possibly empty.
  * @param {string} href The link target.
+ * @returns {Promise<{ ok: boolean, method: string }>} Whether the copy
+ *   succeeded and which clipboard path was used.
  */
 async function writeRichLinkInPage(linkText, tail, href) {
   // Prefer async clipboard for rich HTML copy, with execCommand as fallback.
@@ -66,15 +87,7 @@ async function writeRichLinkInPage(linkText, tail, href) {
         }),
       ]);
 
-      return {
-        ok: true,
-        method: "clipboard.write",
-        href,
-        linkText,
-        tail,
-        title: document.title,
-        activeElement: document.activeElement?.tagName ?? null,
-      };
+      return { ok: true, method: "clipboard.write" };
     } catch {
       // Async clipboard can be blocked (e.g. document not focused); fall
       // through to the execCommand path below.
@@ -96,16 +109,7 @@ async function writeRichLinkInPage(linkText, tail, href) {
   const sel = window.getSelection();
   if (!sel) {
     div.remove();
-    return {
-      ok: false,
-      method: "execCommand",
-      href,
-      linkText,
-      tail,
-      title: document.title,
-      activeElement: document.activeElement?.tagName ?? null,
-      selectionRangeCount: 0,
-    };
+    return { ok: false, method: "execCommand" };
   }
   sel.removeAllRanges();
   sel.addRange(range);
@@ -118,26 +122,19 @@ async function writeRichLinkInPage(linkText, tail, href) {
     div.remove();
   }
 
-  return {
-    ok,
-    method: "execCommand",
-    href,
-    linkText,
-    tail,
-    title: document.title,
-    activeElement: document.activeElement?.tagName ?? null,
-    selectionRangeCount: sel.rangeCount,
-  };
+  return { ok, method: "execCommand" };
 }
 
 /**
- * Briefly show a ✓ badge on the action to confirm the copy.
+ * Briefly show a badge on the action reporting whether the copy succeeded.
  * @param {number} tabId
+ * @param {boolean} ok
  */
-async function flashBadge(tabId) {
+async function flashBadge(tabId, ok) {
+  const badge = ok ? SUCCESS_BADGE : FAILURE_BADGE;
   try {
-    await chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLOR });
-    await chrome.action.setBadgeText({ tabId, text: "✓" });
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color });
+    await chrome.action.setBadgeText({ tabId, text: badge.text });
   } catch {
     return;
   }
@@ -147,7 +144,8 @@ async function flashBadge(tabId) {
 }
 
 /**
- * Parse the tab's PR, then inject the clipboard write and flash the badge.
+ * Parse the tab's PR, then inject the clipboard write and flash a badge
+ * reflecting whether the copy actually succeeded.
  * @param {chrome.tabs.Tab | undefined} tab
  */
 async function copyForTab(tab) {
@@ -157,17 +155,19 @@ async function copyForTab(tab) {
 
   const { linkText, tail, href } = formatPrLink(pr, tab.title);
 
+  let ok = false;
   try {
-    await chrome.scripting.executeScript({
+    const [injection] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: writeRichLinkInPage,
       args: [linkText, tail, href],
     });
+    ok = injection?.result?.ok === true;
   } catch {
-    return;
+    // Injection can fail on restricted pages; report it via the badge.
   }
 
-  flashBadge(tab.id);
+  await flashBadge(tab.id, ok);
 }
 
 chrome.action.onClicked.addListener(copyForTab);
@@ -175,5 +175,5 @@ chrome.action.onClicked.addListener(copyForTab);
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "copy-pr-link") return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab) copyForTab(tab);
+  if (tab) await copyForTab(tab);
 });

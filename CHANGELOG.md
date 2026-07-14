@@ -14,13 +14,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The toolbar badge now reports the real outcome: a green ✓ only when the
+  in-page clipboard write succeeded, and a red ! when it failed (previously a
+  failed copy either showed ✓ or nothing at all).
+- The action's enabled/disabled state is now synced for all open tabs on
+  install and browser startup, not just after the next navigation.
 - Dropped a dangling `": "` suffix when a PR has no parseable title.
 - Added null-safety guards around `window.getSelection()` in the clipboard
   fallback path.
 
 ### Added
 
-- Unit tests (Vitest) with 100% coverage of `src/`.
+- Unit tests (Vitest) with 100% coverage of `src/`, plus tests for the
+  `background.js` extension wiring against a mocked `chrome` API.
 - Tooling: ESLint, Prettier, EditorConfig, static type-checking via
   `tsc --checkJs`, and `web-ext` for manifest linting and packaging.
 - CI (lint, type-check, test, build) and a tag-driven release workflow.

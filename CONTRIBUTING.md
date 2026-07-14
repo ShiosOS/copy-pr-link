@@ -17,7 +17,8 @@ npm run check   # format check + ESLint + tsc + web-ext lint + tests
 - `src/pr.js` — pure, unit-tested logic (URL/title parsing, link formatting).
 - `background.js` — the extension layer (toolbar action, command, tab
   listeners, clipboard write). Loaded as an ES module.
-- `tests/` — Vitest unit tests for `src/`.
+- `tests/` — Vitest unit tests: `pr.test.js` covers `src/`, and
+  `background.test.js` covers the extension wiring via a mocked `chrome` API.
 
 See [README.md](README.md#architecture) for more on the architecture.
 
