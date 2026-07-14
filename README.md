@@ -4,7 +4,7 @@
 [![CodeQL](https://github.com/ShiosOS/copy-pr-link/actions/workflows/codeql.yml/badge.svg)](https://github.com/ShiosOS/copy-pr-link/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Browser extension (Chrome and Firefox) that copies a GitHub pull request as a rich-text hyperlink. Pasting in Slack, email, or any rich-text editor renders as `Pull Request 1234: Title` with only the identifier portion as a clickable link — matching Azure DevOps's "Copy" button on PR pages.
+Browser extension (Chrome 102+ and Firefox 112+) that copies a GitHub pull request as a rich-text hyperlink. Pasting in Slack, email, or any rich-text editor renders as `Pull Request 1234: Title` with only the identifier portion as a clickable link — matching Azure DevOps's "Copy" button on PR pages.
 
 ## Install from a release
 
@@ -56,12 +56,12 @@ New releases require redownloading the zip and reloading the extension — Chrom
 
 ## Development
 
-Requires Node.js 20+.
+Requires Node.js 22+ (see `.nvmrc`).
 
 ```bash
 npm install        # install dev tooling (Vitest, ESLint, Prettier, web-ext)
 npm test           # run the unit tests
-npm run coverage   # run tests with a coverage report (100% on src/)
+npm run coverage   # run tests with coverage (100% enforced on all shipped code)
 npm run lint       # ESLint
 npm run lint:ext   # web-ext lint (validates the manifest for Firefox)
 npm run format     # auto-format with Prettier
@@ -80,22 +80,34 @@ browser-only wiring:
 
 - `src/pr.js` — **pure logic**, no browser APIs: `parsePrUrl` (URL → PR parts),
   `parsePrTitle` (document title → PR title), `formatPrLink` (PR + title → the
-  link parts). Exercised by `tests/pr.test.js` and held at 100% coverage.
-- `background.js` — the **extension layer**: imports `src/pr.js`, wires up the
-  toolbar action, keyboard command, and tab listeners, and injects the
-  clipboard write into the page. Its listeners are tested against a mocked
-  `chrome` API in `tests/background.test.js`; the injected in-page clipboard
-  function is validated by `web-ext lint` and manual testing. It's loaded as
-  an ES module (`"background": { "type": "module" }`), which is why the
-  manifest requires Firefox 112+.
+  link parts). Exercised by `tests/pr.test.js`.
+- `src/clipboard.js` — the **in-page clipboard writer**
+  (`writeRichLinkInPage`): a self-contained function that background.js
+  injects into the page via `chrome.scripting.executeScript`, so it must not
+  reference imports or module state. Tested under jsdom in
+  `tests/clipboard.test.js`.
+- `background.js` — the **extension layer**: wires up the toolbar action,
+  keyboard command, and tab listeners, and injects the clipboard write into
+  the page. Tested against a mocked `chrome` API in
+  `tests/background.test.js`. It's loaded as an ES module
+  (`"background": { "type": "module" }`), which is why the manifest requires
+  Firefox 112+.
+
+Coverage is enforced at 100% (statements, branches, functions, lines) across
+all shipped code, and `tests/manifest.test.js` guards the manifest against
+drifting out of sync with the package version, shipped icons, and the command
+wiring.
 
 ## Files
 
 - `manifest.json` — MV3 manifest
-- `background.js` — extension entry point / service worker (action, command, and tab listeners; clipboard write)
+- `background.js` — extension entry point / service worker (action, command, and tab listeners)
 - `src/pr.js` — pure, testable PR-parsing and link-formatting helpers
+- `src/clipboard.js` — the self-contained clipboard writer injected into the page
 - `tests/pr.test.js` — Vitest unit tests for `src/pr.js`
+- `tests/clipboard.test.js` — Vitest unit tests for the clipboard writer (jsdom)
 - `tests/background.test.js` — Vitest unit tests for the extension wiring, run against a mocked `chrome` API
+- `tests/manifest.test.js` — manifest/package consistency checks
 - `icons/icon-{16,48,128}.png` — toolbar icons
 - `icons/icon.svg` — source for regenerating the PNGs (Octicons `git-pull-request`, MIT)
 - `icons/LICENSE-octicons.txt` — MIT license attribution
