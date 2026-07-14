@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Dispatched on the new tag by the Prepare Release workflow: tags pushed
+  # with GITHUB_TOKEN don't fire `push` triggers (recursion protection).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -57,5 +60,6 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
+          tag_name: ${{ github.ref_name }}
           files: dist/*.zip
           generate_release_notes: true
