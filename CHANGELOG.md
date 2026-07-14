@@ -46,6 +46,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI (lint, type-check, test, build) and a tag-driven release workflow that
   refuses to publish when the tag, `package.json`, and `manifest.json`
   versions disagree.
+- `RELEASING.md`: the maintainer's release runbook — the automated flow, the
+  manual fallback, browser-store credential setup, the first-time Chrome Web
+  Store submission checklist, and troubleshooting.
 - One-click release automation: a "Prepare Release" workflow bumps
   `package.json`, `package-lock.json`, and `manifest.json` in lockstep,
   promotes the changelog's `[Unreleased]` section, verifies the tree, commits,
