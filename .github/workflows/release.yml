@@ -23,8 +23,28 @@ jobs:
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
+
+      - name: Verify tag matches package.json and manifest.json versions
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const tag = process.env.TAG.replace(/^v/, "");
+            const version = (file) =>
+              JSON.parse(readFileSync(file, "utf8")).version;
+            const pkg = version("package.json");
+            const manifest = version("manifest.json");
+            if (pkg !== tag || manifest !== tag) {
+              console.error(
+                `Version mismatch: tag v${tag}, package.json ${pkg}, manifest.json ${manifest}`,
+              );
+              process.exit(1);
+            }
+            console.log(`Release version ${tag} is consistent.`);
+          '
 
       - run: npm ci
 
