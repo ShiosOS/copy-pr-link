@@ -57,9 +57,41 @@ jobs:
       - name: Build extension package
         run: npm run build
 
+      # ---------------------------------------------------------------------
+      # Optional store publishing. Each step runs only when its credentials
+      # exist as repository Actions secrets (Settings → Secrets and variables
+      # → Actions); without them, releases stay GitHub-only. See the README's
+      # "Publishing to the browser stores" section for the one-time setup.
+      # ---------------------------------------------------------------------
+
+      # Submits the build to addons.mozilla.org for signing and downloads the
+      # Mozilla-signed .xpi into dist/, so it gets attached to the GitHub
+      # release below. The unlisted channel is self-hosted distribution: the
+      # .xpi installs permanently in regular Firefox without an AMO listing.
+      # Switch --channel to "listed" to publish on addons.mozilla.org instead.
+      - name: Sign for Firefox (AMO)
+        if: ${{ secrets.AMO_JWT_ISSUER != '' }}
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: npx --no-install web-ext sign --channel unlisted --artifacts-dir dist
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ github.ref_name }}
-          files: dist/*.zip
+          files: |
+            dist/*.zip
+            dist/*.xpi
           generate_release_notes: true
+
+      # Uploads and publishes the new version to the Chrome Web Store. The
+      # listing must already exist (the very first submission is manual).
+      - name: Publish to the Chrome Web Store
+        if: ${{ secrets.CHROME_REFRESH_TOKEN != '' }}
+        env:
+          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: npx --no-install chrome-webstore-upload --source dist/*.zip

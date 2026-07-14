@@ -19,7 +19,15 @@ New releases require redownloading the zip and reloading the extension — Chrom
 
 ### Firefox
 
-1. Download the `copy-pr-link-vX.Y.Z.zip` asset from the [latest release](https://github.com/ShiosOS/copy-pr-link/releases/latest).
+If the release includes a Mozilla-signed `.xpi` asset, use that — it installs
+permanently:
+
+1. Download the `.xpi` asset from the [latest release](https://github.com/ShiosOS/copy-pr-link/releases/latest).
+2. Open `about:addons`, click the gear icon → **Install Add-on From File…**, and select the `.xpi` (or drag it onto the Add-ons page).
+
+Otherwise, load the zip temporarily:
+
+1. Download the `copy-pr-link-vX.Y.Z.zip` asset.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click **Load Temporary Add-on…** and select the zip file (or `manifest.json` inside the unzipped folder).
 
@@ -93,6 +101,44 @@ The workflow refuses to run from branches other than `main` and fails before
 touching anything if `[Unreleased]` is empty. Pushing a `v*` tag by hand still
 works — the Release workflow picks it up and its version guard rejects
 mismatched tags.
+
+## Publishing to the browser stores
+
+Store publishing is built into the Release workflow but **off by default**:
+each publish step runs only when its credentials exist as repository Actions
+secrets (GitHub → Settings → Secrets and variables → Actions). Without them,
+releases are GitHub-only. One-time setup:
+
+### Firefox (free)
+
+1. Create a [Firefox Add-ons developer account](https://addons.mozilla.org/developers/).
+2. Generate API credentials at
+   [Manage API Keys](https://addons.mozilla.org/developers/addon/api/key/).
+3. Add the repository secrets `AMO_JWT_ISSUER` (the "JWT issuer") and
+   `AMO_JWT_SECRET` (the "JWT secret").
+
+From the next release on, the workflow submits the build to Mozilla for
+signing and attaches the signed `.xpi` to the GitHub release — installable
+permanently in regular Firefox. This uses the **unlisted** (self-hosted)
+channel; to publish on addons.mozilla.org instead, create the listing once and
+switch the workflow's `web-ext sign` step to `--channel listed`.
+
+### Chrome (one-time $5 registration)
+
+1. Register as a [Chrome Web Store developer](https://chrome.google.com/webstore/devconsole/)
+   (one-time $5 fee).
+2. Create the listing **manually once**: upload the zip from any release in
+   the developer console, fill in the listing and privacy disclosures, and
+   submit for review. Note the extension ID it assigns.
+3. Create OAuth credentials for the Web Store API — follow the
+   [Chrome Web Store API guide](https://developer.chrome.com/docs/webstore/using-api)
+   to get a client ID, client secret, and refresh token.
+4. Add the repository secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`,
+   `CHROME_CLIENT_SECRET`, and `CHROME_REFRESH_TOKEN`.
+
+From the next release on, the workflow uploads the new version and submits it
+for Web Store review automatically. Published store versions auto-update for
+users, unlike the load-unpacked zip.
 
 ## Architecture
 
