@@ -83,62 +83,16 @@ unpacked, or upload it to a release.
 
 ## Cutting a release
 
-Releases are fully automated. Make sure the changelog's `[Unreleased]` section
-describes what's shipping, then run the **Prepare Release** workflow
-(Actions → Prepare Release → Run workflow) and pick a bump level
-(patch / minor / major). The workflow will:
+Releases are one click: keep the changelog's `[Unreleased]` section up to
+date, then run the **Prepare Release** workflow (Actions → Prepare Release →
+Run workflow) and pick a bump level. It bumps every version field in
+lockstep, promotes the changelog, tags, and publishes a GitHub Release with
+the zip — plus store publishing when credentials are configured.
 
-1. Bump `package.json`, `package-lock.json`, and `manifest.json` in lockstep
-   (`scripts/prepare-release.mjs`).
-2. Promote the changelog's `[Unreleased]` notes to a dated `[X.Y.Z]` section
-   and update the link references.
-3. Run the full check suite against the bumped tree, then commit
-   `chore(release): vX.Y.Z`, tag `vX.Y.Z`, and push both atomically.
-4. Trigger the **Release** workflow, which verifies the tag matches the
-   manifests, rebuilds, and publishes a GitHub Release with the zip.
-
-The workflow refuses to run from branches other than `main` and fails before
-touching anything if `[Unreleased]` is empty. Pushing a `v*` tag by hand still
-works — the Release workflow picks it up and its version guard rejects
-mismatched tags.
-
-## Publishing to the browser stores
-
-Store publishing is built into the Release workflow but **off by default**:
-each publish step runs only when its credentials exist as repository Actions
-secrets (GitHub → Settings → Secrets and variables → Actions). Without them,
-releases are GitHub-only. One-time setup:
-
-### Firefox (free)
-
-1. Create a [Firefox Add-ons developer account](https://addons.mozilla.org/developers/).
-2. Generate API credentials at
-   [Manage API Keys](https://addons.mozilla.org/developers/addon/api/key/).
-3. Add the repository secrets `AMO_JWT_ISSUER` (the "JWT issuer") and
-   `AMO_JWT_SECRET` (the "JWT secret").
-
-From the next release on, the workflow submits the build to Mozilla for
-signing and attaches the signed `.xpi` to the GitHub release — installable
-permanently in regular Firefox. This uses the **unlisted** (self-hosted)
-channel; to publish on addons.mozilla.org instead, create the listing once and
-switch the workflow's `web-ext sign` step to `--channel listed`.
-
-### Chrome (one-time $5 registration)
-
-1. Register as a [Chrome Web Store developer](https://chrome.google.com/webstore/devconsole/)
-   (one-time $5 fee).
-2. Create the listing **manually once**: upload the zip from any release in
-   the developer console, fill in the listing and privacy disclosures, and
-   submit for review. Note the extension ID it assigns.
-3. Create OAuth credentials for the Web Store API — follow the
-   [Chrome Web Store API guide](https://developer.chrome.com/docs/webstore/using-api)
-   to get a client ID, client secret, and refresh token.
-4. Add the repository secrets `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`,
-   `CHROME_CLIENT_SECRET`, and `CHROME_REFRESH_TOKEN`.
-
-From the next release on, the workflow uploads the new version and submits it
-for Web Store review automatically. Published store versions auto-update for
-users, unlike the load-unpacked zip.
+See **[RELEASING.md](RELEASING.md)** for the full runbook: what the
+automation does, the manual fallback, browser-store credential setup
+(Firefox signing and Chrome Web Store), the first-time Chrome Web Store
+submission checklist, and troubleshooting.
 
 ## Architecture
 

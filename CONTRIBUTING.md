@@ -41,7 +41,8 @@ See [README.md](README.md#architecture) for more on the architecture.
 Maintainers cut releases with the **Prepare Release** workflow (Actions →
 Prepare Release), which bumps all version fields, promotes the changelog, tags,
 and publishes. Keep the changelog's `[Unreleased]` section up to date in your
-PRs — it becomes the release notes. See the README for details.
+PRs — it becomes the release notes. The full runbook, including browser-store
+publishing, lives in [RELEASING.md](RELEASING.md).
 
 ## Manual testing
 
