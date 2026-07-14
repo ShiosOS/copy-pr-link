@@ -46,6 +46,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI (lint, type-check, test, build) and a tag-driven release workflow that
   refuses to publish when the tag, `package.json`, and `manifest.json`
   versions disagree.
+- One-click release automation: a "Prepare Release" workflow bumps
+  `package.json`, `package-lock.json`, and `manifest.json` in lockstep,
+  promotes the changelog's `[Unreleased]` section, verifies the tree, commits,
+  tags, and triggers the publish (`scripts/prepare-release.mjs`, unit-tested).
 - Security automation: Dependabot (grouped updates), CodeQL, SHA-pinned and
   hardened Actions.
 - Community health files (Contributing, Security, Code of Conduct, issue/PR

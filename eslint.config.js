@@ -51,6 +51,20 @@ export default [
     },
   },
   {
+    // Maintenance scripts are Node CLIs and may write to stdout/stderr.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     // The clipboard tests run under jsdom (see @vitest-environment docblock).
     files: ["tests/clipboard.test.js"],
     languageOptions: {

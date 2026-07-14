@@ -36,6 +36,13 @@ See [README.md](README.md#architecture) for more on the architecture.
    `fix:`, `chore:`, `docs:`, `ci:`, `refactor:`, `test:`).
 6. Open a pull request. CI runs the same checks plus a build and CodeQL.
 
+## Releasing
+
+Maintainers cut releases with the **Prepare Release** workflow (Actions →
+Prepare Release), which bumps all version fields, promotes the changelog, tags,
+and publishes. Keep the changelog's `[Unreleased]` section up to date in your
+PRs — it becomes the release notes. See the README for details.
+
 ## Manual testing
 
 Load the unpacked extension (or `npm run build` output) per the README's

@@ -4,6 +4,7 @@
 // (manifest.json, background.js, src/, icons/) are linted and packaged.
 const ignoreFiles = [
   "tests",
+  "scripts",
   "coverage",
   "dist",
   "*.config.js",

@@ -1,0 +1,84 @@
+name: Prepare Release
+
+# One-click releases: pick a bump level and this workflow bumps package.json,
+# package-lock.json, and manifest.json in lockstep, promotes the changelog's
+# [Unreleased] section, verifies the tree, commits, tags, and pushes — then
+# dispatches the Release workflow to build and publish the tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver level for the new version"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Bump, tag & publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the release commit and tag
+      actions: write # dispatch the Release workflow for the new tag
+    steps:
+      - name: Ensure the release is cut from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases must be prepared from main (got ${GITHUB_REF})."
+          exit 1
+
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump versions and promote the changelog
+        id: bump
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          VERSION="$(node scripts/prepare-release.mjs "$BUMP")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Preparing v$VERSION"
+
+      - name: Verify the bumped tree (format, lint, type-check, test)
+        run: npm run check
+
+      - name: Commit, tag, and push
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): v${VERSION}"
+          git tag -a "v${VERSION}" -m "v${VERSION}"
+          git push --atomic origin main "v${VERSION}"
+
+      # Tags pushed with GITHUB_TOKEN never fire `push` triggers (GitHub's
+      # recursion protection), so dispatch the Release workflow explicitly.
+      - name: Trigger the Release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: gh workflow run release.yml --ref "v${VERSION}"
