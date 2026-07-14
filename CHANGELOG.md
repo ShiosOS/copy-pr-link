@@ -50,6 +50,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `package.json`, `package-lock.json`, and `manifest.json` in lockstep,
   promotes the changelog's `[Unreleased]` section, verifies the tree, commits,
   tags, and triggers the publish (`scripts/prepare-release.mjs`, unit-tested).
+- Optional store publishing in the release workflow, enabled by adding API
+  credentials as Actions secrets: a Mozilla-signed `.xpi` attached to each
+  GitHub release (Firefox, self-hosted channel) and automatic Chrome Web
+  Store upload/publish.
 - Security automation: Dependabot (grouped updates), CodeQL, SHA-pinned and
   hardened Actions.
 - Community health files (Contributing, Security, Code of Conduct, issue/PR
