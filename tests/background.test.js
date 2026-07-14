@@ -138,6 +138,36 @@ describe("action enable/disable per tab", () => {
   });
 });
 
+describe("badge lifecycle", () => {
+  const tab = { id: 7, url: PR_URL, title: PR_TITLE };
+
+  it("restarts the clear countdown when copies overlap", async () => {
+    await events.onClicked.fire(tab);
+    vi.advanceTimersByTime(1000);
+    await events.onClicked.fire(tab);
+
+    chromeMock.action.setBadgeText.mockClear();
+    // The first copy's timer would have fired at 1500ms; it must not clear
+    // the second copy's badge early.
+    vi.advanceTimersByTime(1000);
+    expect(chromeMock.action.setBadgeText).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(500);
+    expect(chromeMock.action.setBadgeText).toHaveBeenCalledWith({
+      tabId: 7,
+      text: "",
+    });
+    expect(chromeMock.action.setBadgeText).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores failures when clearing the badge (tab closed mid-flash)", async () => {
+    await events.onClicked.fire(tab);
+    chromeMock.action.setBadgeText.mockRejectedValue(new Error("No tab"));
+    vi.runAllTimers();
+    await Promise.resolve(); // flush the rejection through the catch handler
+  });
+});
+
 describe("copying via the toolbar action", () => {
   const tab = { id: 7, url: PR_URL, title: PR_TITLE };
 
@@ -194,6 +224,32 @@ describe("copying via the toolbar action", () => {
     });
   });
 
+  it("treats a missing injection result as failure", async () => {
+    chromeMock.scripting.executeScript.mockResolvedValue([]);
+    await events.onClicked.fire(tab);
+
+    expect(chromeMock.action.setBadgeText).toHaveBeenCalledWith({
+      tabId: 7,
+      text: "!",
+    });
+  });
+
+  it("treats a null in-page result as failure", async () => {
+    // Injected functions that throw resolve with result: null/undefined.
+    chromeMock.scripting.executeScript.mockResolvedValue([{ result: null }]);
+    await events.onClicked.fire(tab);
+
+    expect(chromeMock.action.setBadgeText).toHaveBeenCalledWith({
+      tabId: 7,
+      text: "!",
+    });
+  });
+
+  it("ignores tabs without an id", async () => {
+    await events.onClicked.fire({ id: undefined, url: PR_URL });
+    expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
   it("does nothing on non-PR pages", async () => {
     await events.onClicked.fire({ id: 8, url: "https://example.com" });
     expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
@@ -230,6 +286,12 @@ describe("copying via the keyboard command", () => {
   it("does nothing when there is no active tab", async () => {
     chromeMock.tabs.query.mockResolvedValue([]);
     await events.onCommand.fire("copy-pr-link");
+    expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
+  it("survives the tab query failing", async () => {
+    chromeMock.tabs.query.mockRejectedValue(new Error("boom"));
+    await expect(events.onCommand.fire("copy-pr-link")).resolves.not.toThrow();
     expect(chromeMock.scripting.executeScript).not.toHaveBeenCalled();
   });
 });

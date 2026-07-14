@@ -8,6 +8,18 @@ export default [
   },
   js.configs.recommended,
   {
+    // Stricter correctness rules on top of eslint:recommended.
+    rules: {
+      eqeqeq: ["error", "smart"],
+      "no-var": "error",
+      "prefer-const": "error",
+      "no-console": "error",
+      "object-shorthand": ["error", "always"],
+      "no-implicit-coercion": "error",
+      "prefer-promise-reject-errors": "error",
+    },
+  },
+  {
     // Extension code: runs in the browser / WebExtensions background context.
     files: ["background.js", "src/**/*.js"],
     languageOptions: {
@@ -35,6 +47,15 @@ export default [
       sourceType: "module",
       globals: {
         ...globals.node,
+      },
+    },
+  },
+  {
+    // The clipboard tests run under jsdom (see @vitest-environment docblock).
+    files: ["tests/clipboard.test.js"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
       },
     },
   },
