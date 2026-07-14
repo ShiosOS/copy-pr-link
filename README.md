@@ -73,6 +73,27 @@ npm run check      # everything CI runs: format check + lint + web-ext lint + te
 runtime files (`manifest.json`, `background.js`, `src/`, `icons/`). Load that
 unpacked, or upload it to a release.
 
+## Cutting a release
+
+Releases are fully automated. Make sure the changelog's `[Unreleased]` section
+describes what's shipping, then run the **Prepare Release** workflow
+(Actions → Prepare Release → Run workflow) and pick a bump level
+(patch / minor / major). The workflow will:
+
+1. Bump `package.json`, `package-lock.json`, and `manifest.json` in lockstep
+   (`scripts/prepare-release.mjs`).
+2. Promote the changelog's `[Unreleased]` notes to a dated `[X.Y.Z]` section
+   and update the link references.
+3. Run the full check suite against the bumped tree, then commit
+   `chore(release): vX.Y.Z`, tag `vX.Y.Z`, and push both atomically.
+4. Trigger the **Release** workflow, which verifies the tag matches the
+   manifests, rebuilds, and publishes a GitHub Release with the zip.
+
+The workflow refuses to run from branches other than `main` and fails before
+touching anything if `[Unreleased]` is empty. Pushing a `v*` tag by hand still
+works — the Release workflow picks it up and its version guard rejects
+mismatched tags.
+
 ## Architecture
 
 The code is split so the logic is unit-testable in Node, separate from the
