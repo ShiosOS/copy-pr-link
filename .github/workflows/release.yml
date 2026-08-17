@@ -64,17 +64,17 @@ jobs:
       # "Publishing to the browser stores" section for the one-time setup.
       # ---------------------------------------------------------------------
 
-      # Submits the build to addons.mozilla.org for signing and downloads the
-      # Mozilla-signed .xpi into dist/, so it gets attached to the GitHub
-      # release below. The unlisted channel is self-hosted distribution: the
-      # .xpi installs permanently in regular Firefox without an AMO listing.
-      # Switch --channel to "listed" to publish on addons.mozilla.org instead.
-      - name: Sign for Firefox (AMO)
+      # Submits the build to addons.mozilla.org on the listed channel, which
+      # publishes it on the public AMO listing after Mozilla's review. Listed
+      # submissions don't hand back a signed file (AMO serves it from the
+      # listing), so no .xpi lands in dist/ — the glob below tolerates that.
+      # The listing itself must already exist; see RELEASING.md.
+      - name: Publish to Firefox Add-ons (AMO)
         if: ${{ secrets.AMO_JWT_ISSUER != '' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-        run: npx --no-install web-ext sign --channel unlisted --artifacts-dir dist
+        run: npx --no-install web-ext sign --channel listed --artifacts-dir dist
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
@@ -83,15 +83,12 @@ jobs:
           files: |
             dist/*.zip
             dist/*.xpi
+          # dist/*.xpi matches nothing on the listed channel (see above); an
+          # unmatched glob must warn, not fail the release.
+          fail_on_unmatched_files: false
           generate_release_notes: true
 
-      # Uploads and publishes the new version to the Chrome Web Store. The
-      # listing must already exist (the very first submission is manual).
-      - name: Publish to the Chrome Web Store
-        if: ${{ secrets.CHROME_REFRESH_TOKEN != '' }}
-        env:
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        run: npx --no-install chrome-webstore-upload --source dist/*.zip
+      # Chrome is deliberately NOT automated: its API needs a Google Cloud
+      # OAuth client and a refresh token that Google revokes on its own
+      # schedule, which is more upkeep than the upload saves. Upload the zip
+      # from the GitHub Release by hand — see RELEASING.md.

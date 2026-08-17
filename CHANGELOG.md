@@ -17,6 +17,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scripts) and declared `minimum_chrome_version` 102.
 - Development toolchain now targets Node.js 22 (Node 20 reached end of life
   in April 2026); upgraded `web-ext` to v10.
+- Releases now publish to the public addons.mozilla.org listing
+  (`web-ext sign --channel listed`) instead of producing a self-hosted
+  unlisted `.xpi`.
+
+### Removed
+
+- Dropped the Chrome Web Store upload from the release workflow, along with
+  the `chrome-webstore-upload-cli` dev dependency. The Web Store API requires
+  a Google Cloud OAuth client and a refresh token that Google revokes on its
+  own schedule; maintaining that costs more than the two-minute manual upload
+  it replaces. `RELEASING.md` documents the manual process.
 
 ### Fixed
 

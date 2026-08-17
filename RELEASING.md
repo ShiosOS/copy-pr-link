@@ -10,9 +10,11 @@ stores, and what to do when something fails.
    shipping.
 2. Go to **Actions → Prepare Release → Run workflow**, pick a bump level
    (`patch` / `minor` / `major`), and run it.
-3. Done. A `vX.Y.Z` tag, GitHub Release, and zip appear automatically; store
-   publishing also runs if the credentials in
-   [Store publishing](#store-publishing) are configured.
+3. A `vX.Y.Z` tag, GitHub Release, and zip appear automatically, and the
+   version goes to Firefox Add-ons.
+4. If the release should reach Chrome users, upload the zip to the Chrome Web
+   Store by hand — [Chrome: manual release](#chrome-manual-release), about two
+   minutes.
 
 ## Before you release
 
@@ -55,11 +57,10 @@ Triggered by `v*` tag pushes or by the dispatch above. It:
 1. **Verifies the tag matches** the `package.json` and `manifest.json`
    versions, and fails fast on any mismatch.
 2. Re-runs the full check suite and builds the zip (`npm run build`).
-3. Signs the build for Firefox and uploads to the Chrome Web Store when the
-   [store credentials](#store-publishing) are configured; steps without
-   credentials are skipped.
-4. Publishes a GitHub Release with generated notes, the zip, and (when
-   signing ran) the Mozilla-signed `.xpi`.
+3. Submits the build to Firefox Add-ons when the
+   [AMO credentials](#store-publishing) are configured, and skips the step
+   when they aren't. Chrome is not automated.
+4. Publishes a GitHub Release with generated notes and the zip.
 
 ## Manual release (fallback)
 
@@ -79,19 +80,24 @@ match the manifests.
 
 ## Store publishing
 
-Publishing is built into the Release workflow but **off by default**: each
-store's step runs only when its credentials exist as repository Actions
+The two stores are handled differently on purpose:
+
+- **Firefox is automated.** The Release workflow submits every version to
+  addons.mozilla.org. It's a single API key pair that doesn't expire.
+- **Chrome is manual.** Upload the zip from the GitHub Release yourself; see
+  [Chrome: manual release](#chrome-manual-release). The Web Store API needs a
+  Google Cloud OAuth client and a refresh token that Google revokes on its own
+  schedule, so keeping the automation working costs more attention than the
+  upload it replaces. It's a two-minute drag-and-drop a few times a year.
+
+The Firefox step runs only when its credentials exist as repository Actions
 secrets (**GitHub → Settings → Secrets and variables → Actions**). Without
 them, releases are GitHub-only.
 
-| Secret                 | Store   | Where to get it                                  |
-| ---------------------- | ------- | ------------------------------------------------ |
-| `AMO_JWT_ISSUER`       | Firefox | addons.mozilla.org → Tools → Manage API Keys     |
-| `AMO_JWT_SECRET`       | Firefox | same page (the "JWT secret")                     |
-| `CHROME_EXTENSION_ID`  | Chrome  | Developer console, after the first manual upload |
-| `CHROME_CLIENT_ID`     | Chrome  | Web Store API OAuth setup (guide linked below)   |
-| `CHROME_CLIENT_SECRET` | Chrome  | Web Store API OAuth setup                        |
-| `CHROME_REFRESH_TOKEN` | Chrome  | Web Store API OAuth setup                        |
+| Secret           | Store   | Where to get it                              |
+| ---------------- | ------- | -------------------------------------------- |
+| `AMO_JWT_ISSUER` | Firefox | addons.mozilla.org → Tools → Manage API Keys |
+| `AMO_JWT_SECRET` | Firefox | same page (the "JWT secret")                 |
 
 ### Firefox one-time setup (free)
 
@@ -99,38 +105,75 @@ them, releases are GitHub-only.
 2. Generate API credentials at
    [Manage API Keys](https://addons.mozilla.org/developers/addon/api/key/).
 3. Add the `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` secrets.
+4. Create the AMO listing **manually once** — see
+   [First Firefox Add-ons submission](#first-firefox-add-ons-submission).
 
-From the next release on, the workflow submits the build to Mozilla for
-signing and attaches the signed `.xpi` to the GitHub release — installable
-permanently in regular Firefox. This uses the **unlisted** (self-hosted)
-channel. To publish on addons.mozilla.org instead, create the listing there
-once and switch the `web-ext sign` step in `release.yml` to
-`--channel listed`.
+From the next release on, the workflow submits each new version to
+addons.mozilla.org on the **listed** channel, which publishes it on the public
+AMO listing once Mozilla's review passes (minutes for an automated pass, up to
+a few days if a human reviewer picks it up). Listed submissions don't return a
+signed file — AMO serves the `.xpi` from the listing — so the GitHub Release
+carries the zip only.
 
-### Chrome one-time setup (one-time $5 registration)
+## First Firefox Add-ons submission
+
+The listed channel updates an existing listing; it does not create one with
+metadata. Do the first submission by hand:
+
+1. Go to
+   [Submit a New Add-on](https://addons.mozilla.org/developers/addon/submit/),
+   choose **On this site** (listed), and upload the
+   `copy-pr-link-vX.Y.Z.zip` from any release.
+2. Fill in name, summary, description, and category (Developer Tools) — the
+   README's Usage section is the source for the description, same copy as the
+   Chrome listing.
+3. Submit for review. Once the listing exists, every later release goes up
+   automatically.
+
+Mozilla requires the source code for reviewers when a submission contains
+built or minified code. This extension ships plain unbundled JavaScript, so
+answer **no** to the "Do you use tools to generate this code?" question.
+
+## Chrome: manual release
+
+Chrome publishing is not automated — see the reasoning in
+[Store publishing](#store-publishing). Do this after each release whose
+changes are worth shipping to Chrome users; skipping a version is fine, the
+store only cares that the next upload's version is higher than the published
+one.
+
+### Every release (about 2 minutes)
+
+1. Download `copy-pr-link-vX.Y.Z.zip` from the
+   [latest GitHub Release](https://github.com/ShiosOS/copy-pr-link/releases/latest).
+2. Open the item in the
+   [developer console](https://chrome.google.com/webstore/devconsole/) →
+   **Package → Upload new package**, and pick the zip.
+3. If the changes affect what the listing claims, update the description or
+   screenshots on **Store listing**.
+4. **Submit for review.** Review takes anywhere from a few hours to a few
+   days; you get an email either way.
+
+The console warns about `browser_specific_settings` and `background.scripts`
+in the manifest on every upload. That's the Firefox half of the cross-browser
+config — Chrome ignores both keys and the upload is accepted.
+
+### One-time setup ($5 registration)
 
 1. Register as a
    [Chrome Web Store developer](https://chrome.google.com/webstore/devconsole/)
    ($5, one time).
-2. Create the listing **manually once** — see
-   [First Chrome Web Store submission](#first-chrome-web-store-submission)
-   below. Note the extension ID the console assigns.
-3. Follow the
-   [Chrome Web Store API guide](https://developer.chrome.com/docs/webstore/using-api)
-   to create OAuth credentials (client ID, client secret, refresh token).
-4. Add the four `CHROME_*` secrets.
-
-From the next release on, the workflow uploads the new version and submits it
-for review automatically. The uploaded version must be higher than the
-published one, which the release flow guarantees.
+2. On the account **Settings** page, add and verify the publisher contact
+   email. Publishing is blocked until the verification link is clicked, so
+   start with this.
+3. Create the listing — see
+   [First Chrome Web Store submission](#first-chrome-web-store-submission).
 
 ## First Chrome Web Store submission
 
-The very first listing is manual. Upload the `copy-pr-link-vX.Y.Z.zip` from
-any release, then work through the console tabs. The console will warn about
-`browser_specific_settings` and `background.scripts` in the manifest — that's
-the Firefox half of the cross-browser config; Chrome ignores it and the
-upload is accepted.
+Upload the `copy-pr-link-vX.Y.Z.zip` from any release, then work through the
+console tabs below. Later uploads reuse all of this — only the package
+changes.
 
 ### Privacy practices tab
 
@@ -176,11 +219,6 @@ checkboxes.
 - **Description:** summarize the README's Usage section; minimum 25
   characters.
 
-### Settings page (account-level, one time)
-
-Add and verify the publisher contact email — publishing is blocked until the
-email-verification link is clicked, so start this first.
-
 ## Troubleshooting
 
 - **Prepare Release fails with "nothing to release"** — the changelog's
@@ -192,8 +230,10 @@ email-verification link is clicked, so start this first.
   already submitted to AMO (e.g. a re-run of a previous release). Cut a new
   version instead of re-running.
 - **Re-running a Release for an existing tag** re-creates the GitHub Release
-  assets safely, but store steps may fail as above; prefer a new patch
+  assets safely, but the AMO step may fail as above; prefer a new patch
   release over re-runs.
+- **The Chrome console rejects the upload as "version already exists"** — that
+  version is already published. Upload the next release instead.
 - **The release commit shows no CI run on `main`** — expected: pushes made
   with the workflow's `GITHUB_TOKEN` don't trigger workflows. The identical
   tree already passed the full check inside Prepare Release.
