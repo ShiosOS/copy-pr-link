@@ -57,10 +57,16 @@ Triggered by `v*` tag pushes or by the dispatch above. It:
 1. **Verifies the tag matches** the `package.json` and `manifest.json`
    versions, and fails fast on any mismatch.
 2. Re-runs the full check suite and builds the zip (`npm run build`).
-3. Submits the build to Firefox Add-ons when the
+3. Publishes a GitHub Release with generated notes and the zip.
+4. Submits the build to Firefox Add-ons when the
    [AMO credentials](#store-publishing) are configured, and skips the step
    when they aren't. Chrome is not automated.
-4. Publishes a GitHub Release with generated notes and the zip.
+
+The GitHub Release is published **before** the store submission on purpose. By
+that point Prepare Release has already pushed the version bump and the tag, so
+a store failure ordered first would leave a tagged version with nothing to
+download. This way an AMO outage or rejection is an isolated problem: the
+release exists, and the submission can be retried by hand.
 
 ## Manual release (fallback)
 

@@ -64,29 +64,29 @@ jobs:
       # "Publishing to the browser stores" section for the one-time setup.
       # ---------------------------------------------------------------------
 
+      # The GitHub Release comes first deliberately. Prepare Release has
+      # already committed the version bump and pushed the tag by this point,
+      # so a store submission that fails here would otherwise leave a tagged
+      # version with no release to download. Publishing first keeps a store
+      # outage an isolated, re-runnable problem.
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/*.zip
+          generate_release_notes: true
+
       # Submits the build to addons.mozilla.org on the listed channel, which
       # publishes it on the public AMO listing after Mozilla's review. Listed
-      # submissions don't hand back a signed file (AMO serves it from the
-      # listing), so no .xpi lands in dist/ — the glob below tolerates that.
-      # The listing itself must already exist; see RELEASING.md.
+      # submissions don't hand back a signed file — AMO serves the .xpi from
+      # the listing — so nothing is added to the GitHub Release above. The
+      # listing itself must already exist; see RELEASING.md.
       - name: Publish to Firefox Add-ons (AMO)
         if: ${{ secrets.AMO_JWT_ISSUER != '' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: npx --no-install web-ext sign --channel listed --artifacts-dir dist
-
-      - name: Publish GitHub release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            dist/*.zip
-            dist/*.xpi
-          # dist/*.xpi matches nothing on the listed channel (see above); an
-          # unmatched glob must warn, not fail the release.
-          fail_on_unmatched_files: false
-          generate_release_notes: true
 
       # Chrome is deliberately NOT automated: its API needs a Google Cloud
       # OAuth client and a refresh token that Google revokes on its own
