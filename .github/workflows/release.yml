@@ -16,6 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the GitHub Release and upload the zip
+    env:
+      # Hoisted to the job so the store step can gate itself on whether the
+      # credentials exist. `secrets` is not a valid context in a step's `if:`
+      # — only in `env`, `with`, and `run` — and referencing it there makes
+      # the whole workflow file unparseable, so it must be read via `env`.
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
@@ -58,10 +65,10 @@ jobs:
         run: npm run build
 
       # ---------------------------------------------------------------------
-      # Optional store publishing. Each step runs only when its credentials
+      # Optional store publishing. The AMO step runs only when its credentials
       # exist as repository Actions secrets (Settings → Secrets and variables
-      # → Actions); without them, releases stay GitHub-only. See the README's
-      # "Publishing to the browser stores" section for the one-time setup.
+      # → Actions); without them, releases stay GitHub-only. Chrome is not
+      # automated. See RELEASING.md for the one-time setup of each.
       # ---------------------------------------------------------------------
 
       # The GitHub Release comes first deliberately. Prepare Release has
@@ -82,10 +89,10 @@ jobs:
       # the listing — so nothing is added to the GitHub Release above. The
       # listing itself must already exist; see RELEASING.md.
       - name: Publish to Firefox Add-ons (AMO)
-        if: ${{ secrets.AMO_JWT_ISSUER != '' }}
+        if: ${{ env.AMO_JWT_ISSUER != '' }}
         env:
-          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
-          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          WEB_EXT_API_KEY: ${{ env.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ env.AMO_JWT_SECRET }}
         run: npx --no-install web-ext sign --channel listed --artifacts-dir dist
 
       # Chrome is deliberately NOT automated: its API needs a Google Cloud
