@@ -19,7 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in April 2026); upgraded `web-ext` to v10.
 - Releases now publish to the public addons.mozilla.org listing
   (`web-ext sign --channel listed`) instead of producing a self-hosted
-  unlisted `.xpi`.
+  unlisted `.xpi`. The GitHub Release is published before the store
+  submission, so a store outage can no longer leave a tagged version with
+  nothing to download.
 
 ### Removed
 
