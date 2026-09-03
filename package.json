@@ -38,10 +38,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/chrome": "^0.2.7",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "@vitest/coverage-v8": "^4.1.11",
     "chrome-webstore-upload-cli": "^4.0.1",
-    "eslint": "^10.9.0",
+    "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
